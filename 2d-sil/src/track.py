@@ -51,7 +51,7 @@ class Track:
         return self.point_at_s(s_query)["width"]
 
 
-def generate_track(seed=None, NUM_SAMPLES=500, TRACK_WIDTH=5.0) -> Track:
+def generate_track(seed=None, num_samples=500, track_width=5.0) -> Track:
     
     rng = np.random.default_rng(seed)
 
@@ -70,8 +70,8 @@ def generate_track(seed=None, NUM_SAMPLES=500, TRACK_WIDTH=5.0) -> Track:
     cy = radii * np.sin(angles)
 
     # Close loop by wrapping endpoints
-    cx = np.append(cx, cx[:3])
-    cy = np.append(cy, cy[:3])
+    cx = np.append(cx, cx[0])
+    cy = np.append(cy, cy[0])
     t_ctrl = np.arange(len(cx))
 
     # Fit periodic cubic splines
@@ -79,7 +79,7 @@ def generate_track(seed=None, NUM_SAMPLES=500, TRACK_WIDTH=5.0) -> Track:
     cs_y = CubicSpline(t_ctrl, cy, bc_type='periodic')
 
     # Get samples from spline
-    t = np.linspace(0, NUM_TRACK_POINTS, NUM_SAMPLES, endpoint=False)
+    t = np.linspace(0, NUM_TRACK_POINTS, num_samples, endpoint=False)
 
     x = cs_x(t)
     y = cs_y(t)
@@ -100,7 +100,7 @@ def generate_track(seed=None, NUM_SAMPLES=500, TRACK_WIDTH=5.0) -> Track:
     # Boundary points
     nx = -np.sin(heading)
     ny = np.cos(heading)
-    hw = TRACK_WIDTH / 2.0
+    hw = track_width / 2.0
 
     left_x = x + hw * nx
     left_y = y + hw * ny
@@ -115,12 +115,12 @@ def generate_track(seed=None, NUM_SAMPLES=500, TRACK_WIDTH=5.0) -> Track:
         ('s', 'f8'),
     ])
 
-    points = np.zeros(NUM_SAMPLES, dtype=track_dtype)
+    points = np.zeros(num_samples, dtype=track_dtype)
     points['x'] = x
     points['y'] = y
     points['heading'] = heading
     points['curvature'] = curvature
-    points['width'] = TRACK_WIDTH
+    points['width'] = track_width
     points['left_x'] = left_x
     points['left_y'] = left_y
     points['right_x'] = right_x
