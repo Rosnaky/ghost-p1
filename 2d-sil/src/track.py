@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.interpolate import CubicSpline
-from dataclasses import dataclass
 
 class Track:
     def __init__(self, points: np.ndarray, total_length: float, is_closed: bool = True):
@@ -50,81 +49,108 @@ class Track:
     def width_at_s(self, s_query: float) -> float:
         return self.point_at_s(s_query)["width"]
 
+def _check_min_separation(centerline, widths, min_neighbor_skip=20):
+    n = len(centerline)
+    for i in range(n):
+        for j in range(i + min_neighbor_skip, n):
+            # Skip wrap-around neighbors
+            if (n - j + i) < min_neighbor_skip:
+                continue
+            dist = np.linalg.norm(centerline[i] - centerline[j])
+            min_dist = (widths[i] + widths[j]) / 2.0
+            if dist < min_dist:
+                return False
+    return True
 
-def generate_track(seed=None, num_samples=500, track_width=5.0) -> Track:
+def generate_track(seed=None, num_samples=500, track_width=5.0, max_attempts=500) -> Track | None:
     
     rng = np.random.default_rng(seed)
 
-    # Generate constants
-    NUM_TRACK_POINTS = rng.integers(low=6, high=12)
-    RADIUS_MEAN = rng.uniform(20, 40)
-    RADIUS_VARIANCE = rng.uniform(10, 25)
+    for _ in range(max_attempts):
+        # Generate constants
+        NUM_TRACK_POINTS = rng.integers(low=8, high=16)
+        RADIUS_MEAN = rng.uniform(20, 40)
+        RADIUS_VARIANCE = rng.uniform(10, 25)
 
-    # Generate points around a circle
-    angles = np.sort(rng.uniform(0, 2 * np.pi, NUM_TRACK_POINTS))
-    radii = rng.normal(RADIUS_MEAN, RADIUS_VARIANCE, NUM_TRACK_POINTS)
-    radii = np.clip(radii, RADIUS_MEAN * 0.4, RADIUS_MEAN * 2.0) # Saturate limits
+        # Generate points around a circle
+        angles = np.sort(rng.uniform(0, 2 * np.pi, NUM_TRACK_POINTS))
+        radii = rng.normal(RADIUS_MEAN, RADIUS_VARIANCE, NUM_TRACK_POINTS)
+        radii = np.clip(radii, RADIUS_MEAN * 0.4, RADIUS_MEAN * 2.0) # Saturate limits
 
-    # Convert to Cartesian
-    cx = radii * np.cos(angles)
-    cy = radii * np.sin(angles)
+        # Convert to Cartesian
+        cx = radii * np.cos(angles)
+        cy = radii * np.sin(angles)
 
-    # Close loop by wrapping endpoints
-    cx = np.append(cx, cx[0])
-    cy = np.append(cy, cy[0])
-    t_ctrl = np.arange(len(cx))
+        # Close loop by wrapping endpoints
+        cx = np.append(cx, cx[0])
+        cy = np.append(cy, cy[0])
+        dists = np.sqrt(np.diff(cx)**2 + np.diff(cy)**2)
+        t_ctrl = np.concatenate(([0.0], np.cumsum(dists)))
 
-    # Fit periodic cubic splines
-    cs_x = CubicSpline(t_ctrl, cx, bc_type="periodic") # boundary condition type: periodic so that start = end for derivatives
-    cs_y = CubicSpline(t_ctrl, cy, bc_type='periodic')
+        # Fit periodic cubic splines
+        cs_x = CubicSpline(t_ctrl, cx, bc_type="periodic") # boundary condition type: periodic so that start = end for derivatives
+        cs_y = CubicSpline(t_ctrl, cy, bc_type='periodic')
 
-    # Get samples from spline
-    t = np.linspace(0, NUM_TRACK_POINTS, num_samples, endpoint=False)
+        # Get samples from spline
+        t = np.linspace(0, t_ctrl[-1], num_samples, endpoint=False)
 
-    x = cs_x(t)
-    y = cs_y(t)
-    dx = cs_x(t, 1)
-    dy = cs_y(t, 1)
-    ddx = cs_x(t, 2)
-    ddy = cs_y(t, 2)
+        x = cs_x(t)
+        y = cs_y(t)
+        dx = cs_x(t, 1)
+        dy = cs_y(t, 1)
+        ddx = cs_x(t, 2)
+        ddy = cs_y(t, 2)
 
-    heading = np.arctan2(dy, dx)
+        heading = np.arctan2(dy, dx)
 
-    speed_sq = dx**2 + dy**2
-    curvature = (dx * ddy - dy * ddx) / (speed_sq ** 1.5)
+        speed_sq = dx**2 + dy**2
+        curvature = (dx * ddy - dy * ddx) / (speed_sq ** 1.5)
 
-    # Arc length
-    ds = np.sqrt(np.diff(x)**2 + np.diff(y)**2)
-    s = np.concatenate(([0.0], np.cumsum(ds)))
+        # Arc length
+        ds = np.sqrt(np.diff(x)**2 + np.diff(y)**2)
+        s = np.concatenate(([0.0], np.cumsum(ds)))
 
-    # Boundary points
-    nx = -np.sin(heading)
-    ny = np.cos(heading)
-    hw = track_width / 2.0
+        # Boundary points
+        nx = -np.sin(heading)
+        ny = np.cos(heading)
+        hw = track_width / 2.0
 
-    left_x = x + hw * nx
-    left_y = y + hw * ny
-    right_x = x - hw * nx
-    right_y = y - hw * ny
+        left_x = x + hw * nx
+        left_y = y + hw * ny
+        right_x = x - hw * nx
+        right_y = y - hw * ny
 
-    track_dtype = np.dtype([
-        ('x', 'f8'), ('y', 'f8'), ('heading', 'f8'),
-        ('curvature', 'f8'), ('width', 'f8'),
-        ('left_x', 'f8'), ('left_y', 'f8'),
-        ('right_x', 'f8'), ('right_y', 'f8'),
-        ('s', 'f8'),
-    ])
+        # Validate
+        centerline = np.column_stack((x, y))
+        widths = np.full(num_samples, track_width)
+        min_radius = 1.0 / (np.max(np.abs(curvature)) + 1e-9)
+        
+        if min_radius < 3.0:
+            continue
 
-    points = np.zeros(num_samples, dtype=track_dtype)
-    points['x'] = x
-    points['y'] = y
-    points['heading'] = heading
-    points['curvature'] = curvature
-    points['width'] = track_width
-    points['left_x'] = left_x
-    points['left_y'] = left_y
-    points['right_x'] = right_x
-    points['right_y'] = right_y
-    points['s'] = s
+        if not _check_min_separation(centerline, widths):
+            continue
 
-    return Track(points=points, total_length=s[-1])
+        track_dtype = np.dtype([
+            ('x', 'f8'), ('y', 'f8'), ('heading', 'f8'),
+            ('curvature', 'f8'), ('width', 'f8'),
+            ('left_x', 'f8'), ('left_y', 'f8'),
+            ('right_x', 'f8'), ('right_y', 'f8'),
+            ('s', 'f8'),
+        ])
+
+        points = np.zeros(num_samples, dtype=track_dtype)
+        points['x'] = x
+        points['y'] = y
+        points['heading'] = heading
+        points['curvature'] = curvature
+        points['width'] = track_width
+        points['left_x'] = left_x
+        points['left_y'] = left_y
+        points['right_x'] = right_x
+        points['right_y'] = right_y
+        points['s'] = s
+
+        return Track(points=points, total_length=s[-1])
+    
+    return None
