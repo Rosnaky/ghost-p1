@@ -68,7 +68,7 @@ def generate_track(seed=None, num_samples=500, track_width=5.0, max_attempts=500
 
     for _ in range(max_attempts):
         # Generate constants
-        NUM_TRACK_POINTS = rng.integers(low=8, high=16)
+        NUM_TRACK_POINTS = rng.integers(low=10, high=18)
         RADIUS_MEAN = rng.uniform(20, 40)
         RADIUS_VARIANCE = rng.uniform(10, 25)
 
