@@ -69,25 +69,19 @@ class TrackRenderer:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10))
         self._draw_surface(ax)
         self._draw_boundaries(ax)
-        self._draw_racing_line(ax, racing_line)
+        # self._draw_racing_line(ax, racing_line)  # remove this
         ax.set_aspect("equal")
         ax.grid(True, alpha=0.3)
 
-        # Kart marker
         kart_dot, = ax.plot([], [], "o", color="red", markersize=8, zorder=10)
         heading_line, = ax.plot([], [], "-", color="red", linewidth=2, zorder=10)
+        trail_line, = ax.plot([], [], "-", color="red", alpha=0.4, linewidth=1, zorder=5)
 
         n = len(racing_line)
-
-        def init():
-            kart_dot.set_data([], [])
-            heading_line.set_data([], [])
-            return kart_dot, heading_line
 
         def update(frame):
             i = frame % n
             px, py = racing_line[i, 0], racing_line[i, 1]
-            # Approximate heading from consecutive points
             i_next = (i + 1) % n
             hdg = np.arctan2(
                 racing_line[i_next, 1] - py,
@@ -98,11 +92,11 @@ class TrackRenderer:
 
             kart_dot.set_data([px], [py])
             heading_line.set_data([px, hx], [py, hy])
-            return kart_dot, heading_line
+            trail_line.set_data(racing_line[:i+1, 0], racing_line[:i+1, 1])
+            return kart_dot, heading_line, trail_line
 
         anim = FuncAnimation(
-            fig, update, init_func=init,
-            frames=n, interval=interval_ms, blit=True,
+            fig, update, frames=n, interval=interval_ms, blit=True,
         )
         plt.show()
         return anim
