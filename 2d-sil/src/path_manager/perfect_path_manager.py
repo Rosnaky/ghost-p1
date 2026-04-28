@@ -6,10 +6,12 @@ from track import Track
 G = 9.81
 
 class PerfectPathManager(PathManager):
-    def __init__(self, m, mu, max_speed_ms):
+    def __init__(self, m, mu, max_speed_ms, max_accel, max_brake):
         self.m = m
         self.mu = mu
         self.max_speed_ms = max_speed_ms
+        self.max_accel = max_accel
+        self.max_brake = max_brake
         self.cached_path = None
         self.cached_track_id = None
 
@@ -70,17 +72,31 @@ class PerfectPathManager(PathManager):
         v_next = ca.vertcat(v[1:], v[0])  # type: ignore
         a_lat = v**2 * kappa
         a_lon = (v_next**2 - v**2) / (2 * ds + 1e-6)
-        g = a_lat**2 + a_lon**2
 
-        MU_G = self.mu * G
+        g_friction = a_lat**2 + a_lon**2
+
+        g_accel = a_lon   # upper bounded by a_max
+        g_brake = a_lon   # lower bounded by -brake_max
+
+        g = ca.vertcat(g_friction, g_accel, g_brake)
+
+        mu_g = self.mu * G
 
         opt_vars = ca.vertcat(alpha, v)
 
         lbx = np.concatenate([-np.ones(N), np.ones(N) * 1e-6])
         ubx = np.concatenate([np.ones(N), np.ones(N) * self.max_speed_ms])
 
-        lbg = np.zeros(N)
-        ubg = np.full(N, MU_G**2)
+        lbg = np.concatenate([
+            np.zeros(N),                  # friction circle ≥ 0
+            np.full(N, -np.inf),          # accel: no lower bound
+            np.full(N, -self.max_brake),  # brake: a_lon ≥ -brake_max
+        ])
+        ubg = np.concatenate([
+            np.full(N, mu_g**2),          # friction circle ≤ (μg)²
+            np.full(N, self.max_accel),   # accel: a_lon ≤ accel_max
+            np.full(N, np.inf),           # brake: no upper bound
+        ])
 
         nlp = {'x': opt_vars, 'f': T, 'g': g}
         solver = ca.nlpsol('solver', 'ipopt', nlp, {

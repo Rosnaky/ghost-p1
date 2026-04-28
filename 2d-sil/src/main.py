@@ -36,11 +36,32 @@ def main():
 
     renderer = TrackRenderer(track)
     
-    path_manager: PathManager = PerfectPathManager(2, 0.6, 500)
+    MAX_SPEED_MS = 60
+    MAX_ACCEL = 25
+    MAX_BRAKE = 15
+    DRAG_COEFF = 0.35
+    MAX_STEER_RAD = np.radians(25)
+    MU_S_COEFF = 0.6
+    MASS_KG = 60
+
+    path_manager: PathManager = PerfectPathManager(
+        m=MASS_KG,
+        mu=MU_S_COEFF, 
+        max_speed_ms=MAX_SPEED_MS,
+        max_accel=MAX_ACCEL,
+        max_brake=MAX_BRAKE
+    )
     # path_manager: PathManager = CenterlineConstantSpeedPathManager()
     controller = PurePursuitController()
 
-    dynamics = KartDynamics()
+    dynamics = KartDynamics(
+        wheel_base=1.05, 
+        max_steer=MAX_STEER_RAD, 
+        max_speed=MAX_SPEED_MS,
+        max_accel=MAX_ACCEL,
+        max_brake=MAX_BRAKE,
+        drag=DRAG_COEFF
+    )
     dt = 1 / 20 # 100 Hz
 
     positions = []
