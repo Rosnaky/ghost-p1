@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: ghost-p1-2d-sil
+Version: 0.1.0
+Requires-Python: >=3.13
+Requires-Dist: casadi>=3.7.2
+Requires-Dist: matplotlib>=3.10.8
+Requires-Dist: numpy>=2.4.4
+Requires-Dist: scipy>=1.17.1

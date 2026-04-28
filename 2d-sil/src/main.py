@@ -3,8 +3,7 @@ import argparse
 from track import Track, generate_track
 from renderer import TrackRenderer
 from logger import logger
-from path_manager import PathManager
-from path_manager import CenterlineConstantSpeedPathManager
+from path_manager import PathManager, CenterlineConstantSpeedPathManager, PerfectPathManager
 from kart import KartState, KartDynamics
 from controller.pure_pursuit_controller import PurePursuitController
 import numpy as np
@@ -37,20 +36,23 @@ def main():
 
     renderer = TrackRenderer(track)
     
-    path_manager: PathManager = CenterlineConstantSpeedPathManager()
+    path_manager: PathManager = PerfectPathManager(2, 0.6, 500)
+    # path_manager: PathManager = CenterlineConstantSpeedPathManager()
     controller = PurePursuitController()
 
     dynamics = KartDynamics()
-    dt = 1 / 100 # 100 Hz
+    dt = 1 / 20 # 100 Hz
 
     positions = []
 
-    for _ in range(5000):
+    for i in range(5000):
         path = path_manager.compute_path(state.x, state.y, state.heading_rad, state.speed_ms, track)
         throttle, steer = controller.compute(state.x, state.y, state.heading_rad, state.speed_ms, path)
         state = dynamics.step(state, throttle, steer, dt)
         
         positions.append([state.x, state.y])
+
+        logger.debug(f"Iteration {i} complete")
 
     positions = np.array(positions)
     renderer.animate_lap(positions)
