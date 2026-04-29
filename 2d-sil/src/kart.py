@@ -16,9 +16,9 @@ class KartDynamics:
     def __init__(self, 
                  wheel_base=1.05, 
                  max_steer=np.radians(25), 
-                 max_speed=22.0,
-                 max_accel=8.0,
-                 max_brake=12.0,
+                 max_speed=60.0,
+                 max_accel=25.0,
+                 max_brake=15.0,
                  drag=0.35
     ):
         self.L = wheel_base
