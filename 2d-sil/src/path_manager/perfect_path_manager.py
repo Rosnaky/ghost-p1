@@ -88,14 +88,14 @@ class PerfectPathManager(PathManager):
         ubx = np.concatenate([np.ones(N), np.ones(N) * self.max_speed_ms])
 
         lbg = np.concatenate([
-            np.zeros(N),                  # friction circle ≥ 0
-            np.full(N, -np.inf),          # accel: no lower bound
-            np.full(N, -self.max_brake),  # brake: a_lon ≥ -brake_max
+            np.zeros(N),
+            np.full(N, -np.inf),
+            np.full(N, -self.max_brake),
         ])
         ubg = np.concatenate([
-            np.full(N, mu_g**2),          # friction circle ≤ (μg)²
-            np.full(N, self.max_accel),   # accel: a_lon ≤ accel_max
-            np.full(N, np.inf),           # brake: no upper bound
+            np.full(N, mu_g**2),
+            np.full(N, self.max_accel),
+            np.full(N, np.inf),
         ])
 
         nlp = {'x': opt_vars, 'f': T, 'g': g}
