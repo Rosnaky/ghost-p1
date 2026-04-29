@@ -9,6 +9,7 @@ class KartState:
     speed_ms: float = 0.0
     steer_angle_rad: float = 0.0
 
+    @property
     def position(self) -> np.ndarray:
         return np.array([self.x, self.y])
 
