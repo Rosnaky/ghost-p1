@@ -75,8 +75,8 @@ class PerfectPathManager(PathManager):
 
         g_friction = a_lat**2 + a_lon**2
 
-        g_accel = a_lon   # upper bounded by a_max
-        g_brake = a_lon   # lower bounded by -brake_max
+        g_accel = a_lon   # Upper bounded by a_max
+        g_brake = a_lon   # Lower bounded by -brake_max
 
         g = ca.vertcat(g_friction, g_accel, g_brake)
 
