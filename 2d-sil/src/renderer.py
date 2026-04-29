@@ -89,7 +89,7 @@ class Renderer:
         R = np.array([[c, -s], [s, c]])
         sx, sy = self._w2s(x, y)
         pts = (R @ body.T).T + np.array([sx, sy])
-        pygame.draw.polygon(self.screen, KART, pts.astype(int))
+        pygame.draw.polygon(self.screen, KART, pts.astype(int)) # type: ignore
 
     def draw_hud(self, lines):
         for i, line in enumerate(lines):

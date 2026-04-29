@@ -7,6 +7,7 @@ from path_manager import PathManager, CenterlineConstantSpeedPathManager, Perfec
 from kart import KartState, KartDynamics
 from controller.pure_pursuit_controller import PurePursuitController
 from logger import logger
+from stats import Stats
 
 
 def main():
@@ -21,7 +22,7 @@ def main():
     MAX_BRAKE = 5
     DRAG_COEFF = 0.30
     MAX_STEER_RAD = np.radians(45)
-    MU_S_COEFF = 0.6
+    MU_S_COEFF = 0.7
     MASS_KG = 60
 
     def make_state(track):
@@ -45,6 +46,7 @@ def main():
         wheel_base=1.05, max_steer=MAX_STEER_RAD, max_speed=MAX_SPEED_MS,
         max_accel=MAX_ACCEL, max_brake=MAX_BRAKE, drag=DRAG_COEFF,
     )
+    stats = Stats(track)
 
     renderer = Renderer()
 
@@ -93,6 +95,8 @@ def main():
                 trail.append((state.x, state.y))
                 if len(trail) > 5000:
                     trail.pop(0)
+                
+                stats.iter(state, physics_dt)
 
         renderer.set_camera(state.x, state.y)
         renderer.clear()
@@ -104,13 +108,14 @@ def main():
         renderer.draw_trail(trail)
         renderer.draw_kart(state.x, state.y, state.heading_rad)
 
-        renderer.draw_hud([
-            f"Speed: {state.speed_ms:.1f} m/s ({state.speed_ms * 3.6:.0f} km/h)",
+        hud = stats.hud_lines(state) + [
             f"Zoom: {renderer.zoom:.1f}x  Sim: {sim_speed:.1f}x",
             f"Path: {path_manager.name}",
             f"{'PAUSED' if paused else 'RUNNING'}",
             f"[R] new track  [SPACE] pause  [+/-] speed  [scroll] zoom",
-        ])
+        ]
+
+        renderer.draw_hud(hud)
 
         renderer.flip()
 
