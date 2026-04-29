@@ -101,13 +101,14 @@ class PerfectPathManager(PathManager):
         nlp = {'x': opt_vars, 'f': T, 'g': g}
         solver = ca.nlpsol('solver', 'ipopt', nlp, {
             'ipopt.print_level': 0,
-            'ipopt.max_iter': 300,
+            'ipopt.max_iter': 3000, # Increase this for more optimal racing line
             'print_time': 0,
         })
 
         x0 = np.concatenate([np.zeros(N), np.ones(N) * 10.0])
 
         sol = solver(x0=x0, lbx=lbx, ubx=ubx, lbg=lbg, ubg=ubg)
+        print(solver.stats()['return_status']) # Print status to see if maximum iterations have been reached
 
         sol_vals = sol['x'].full().flatten()
         alpha_opt = sol_vals[:N]
