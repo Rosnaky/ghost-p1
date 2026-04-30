@@ -6,7 +6,7 @@ class PurePursuitController:
         self.lookahead_metres = lookahead_metres
         self.wheelbase = wheelbase
 
-    def compute(self, x, y, heading, speed, path: PathOutput):
+    def compute(self, x, y, heading, speed, path: PathOutput, dt):
         dists = np.linalg.norm(path.waypoints - np.array([x, y]), axis=1)
         valid = dists > self.lookahead_metres * 0.5
         if not np.any(valid):

@@ -1,7 +1,7 @@
 import numpy as np
 from track import Track
 from kart import KartState
-
+from state_estimation.ekf import FusedState
 
 class Stats:
     def __init__(self, track: Track):
@@ -16,15 +16,23 @@ class Stats:
         self.min_speed = float('inf')
         self._cl = track.centerline()
 
-    def iter(self, state: KartState, dt: float):
+        self.pos_error = 0.0
+        self.heading_error = 0.0
+        self.speed_error = 0.0
+
+    def iter(self, actual: KartState, fused: FusedState, dt: float):
         self.sim_time += dt
 
-        if state.speed_ms > self.max_speed:
-            self.max_speed = state.speed_ms
-        if state.speed_ms < self.min_speed and state.speed_ms > 0.1:
-            self.min_speed = state.speed_ms
+        if actual.speed_ms > self.max_speed:
+            self.max_speed = actual.speed_ms
+        if actual.speed_ms < self.min_speed and actual.speed_ms > 0.1:
+            self.min_speed = actual.speed_ms
 
-        dists = np.linalg.norm(self._cl - np.array([state.x, state.y]), axis=1)
+        self.pos_error = np.sqrt((actual.x - fused.px)**2 + (actual.y - fused.py)**2)
+        self.heading_error = abs((actual.heading_rad - fused.heading + np.pi) % (2 * np.pi) - np.pi)
+        self.speed_error = abs(actual.speed_ms - np.sqrt(fused.vx**2 + fused.vy**2))
+
+        dists = np.linalg.norm(self._cl - np.array([actual.x, actual.y]), axis=1)
         nearest = np.argmin(dists)
         s_now = self.track.points['s'][nearest]
 
@@ -49,4 +57,5 @@ class Stats:
             lines.append(f"Last: {self.last_lap_time:.2f}s  Best: {self.best_lap_time:.2f}s")
         if self.min_speed < float('inf'):
             lines.append(f"Max: {self.max_speed:.1f} m/s  Min: {self.min_speed:.1f} m/s")
+        lines.append(f"EKF err  pos: {self.pos_error:.3f}m  hdg: {np.degrees(self.heading_error):.1f}°  spd: {self.speed_error:.2f}m/s")
         return lines
