@@ -3,8 +3,7 @@ from kart import KartState
 from .types import IMUMeasurement
 
 class SILIMUSensor:
-    def __init__(self, num_magnets, update_rate, wheel_base, seed=69, accel_noise=0.03, gyro_noise=0.001, drift_rate=0.0001):
-        self.num_magnets = num_magnets
+    def __init__(self, update_rate, wheel_base, seed=69, accel_noise=0.03, gyro_noise=0.001, drift_rate=0.0001):
         self.update_rate = update_rate
         self.wheel_base = wheel_base
         self.rng = np.random.default_rng(seed)
