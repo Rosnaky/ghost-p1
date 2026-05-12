@@ -24,9 +24,8 @@ class PIDController:
         nearest = path.waypoints[nearest_idx]
 
         # Errors
-        dx = nearest[0] - x
-        dy = nearest[1] - y
-        lateral_error = -dx * np.sin(heading) + dy * np.cos(heading)
+        lateral_target = -nearest[0] * np.sin(heading) + nearest[1] * np.cos(heading)
+        lateral_measured = -x * np.sin(heading) + y * np.cos(heading)
 
         # Lookahead
         effective_lookahead = self.lookahead_m + speed * 0.3
@@ -46,12 +45,12 @@ class PIDController:
         else:
             steer_ff = np.arctan(2.0 * ly * self.wheel_base / (L**2))
 
-        steer_fb = self.lateral_pid.compute(lateral_error, dt)
+        steer_fb = self.lateral_pid.compute(lateral_measured, lateral_target, dt)
         speed_factor = max(speed * 2.5, 1.0)
         steer = steer_ff + steer_fb / speed_factor
 
         target_speed = path.target_speeds[nearest_idx]
         speed_error = target_speed - speed
-        throttle = self.throttle_pid.compute(speed_error, dt)
+        throttle = self.throttle_pid.compute(speed, target_speed, dt)
 
         return throttle, steer
