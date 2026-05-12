@@ -11,17 +11,21 @@ class PID:
 
         self.integral = 0
         self.prev_error = 0
+        self.prev_measurement = 0
 
-    def compute(self, error, dt):
+    def compute(self, measured, target, dt):
+        error = target - measured
+
         self.integral += error * dt
 
         if self.i_awup:
             self.integral = np.clip(self.integral, -self.i_awup, self.i_awup)
 
-        derivative = (error - self.prev_error) / (dt + 1e-9)
+        derivative = (measured - self.prev_measurement) / (dt + 1e-9)
         self.prev_error = error
+        self.prev_measurement = measured
 
-        output = self.kp * error + self.ki * self.integral - self.kd * derivative
+        output = self.kp * error + self.ki * self.integral + self.kd * derivative
         
         sat_min = self.output_min if self.output_min else float("-inf")
         sat_max = self.output_max if self.output_max else float("inf")

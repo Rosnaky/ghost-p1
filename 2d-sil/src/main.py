@@ -77,16 +77,14 @@ def main():
 
     throttle_pid = PID(
         kp=0.5,
-        ki=0.05,
+        ki=0.2,
         kd=0.1,
         i_awup=2.0,
     )
     lateral_pid = PID(
-        kp=0.6,
-        ki=0.0,
-        kd=0.1,
-        output_min=-0.5,
-        output_max=0.5,
+        kp=0.7,
+        ki=0.1,
+        kd=0.0,
     )
 
     controller = PIDController(
